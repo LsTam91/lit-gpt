@@ -37,7 +37,7 @@ def prepare(
             max_seq_length = config["block_size"]
 
     destination_path.mkdir(parents=True, exist_ok=True)
-    data_file_path = destination_path / data_file_name
+    # data_file_path = destination_path / data_file_name
     print("Loading data file...")
     # download_if_missing(data_file_path, data_file_url)
     with open(data_file_path / Path(data_file_name + "_train_set.json"), "r", encoding="utf-8") as file:
