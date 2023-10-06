@@ -37,8 +37,8 @@ devices = 1
 
 # Hyperparameters
 learning_rate = 3e-4
-batch_size = 128
-micro_batch_size = 4
+batch_size = 96
+micro_batch_size = 3
 gradient_accumulation_iters = batch_size // micro_batch_size
 assert gradient_accumulation_iters > 0
 max_iters = 50000  # train dataset size
@@ -107,7 +107,7 @@ def main(fabric: L.Fabric, data_dir: Path, checkpoint_dir: Path, out_dir: Path, 
         os.makedirs(out_dir, exist_ok=True)
 
     train_data = torch.load(data_dir / "train.pt")
-    val_data = torch.load(data_dir / "test.pt")
+    val_data = torch.load(data_dir / "val.pt")
 
     if not any((lora_query, lora_key, lora_value, lora_projection, lora_mlp, lora_head)):
         fabric.print("Warning: all LoRA layers are disabled!")
