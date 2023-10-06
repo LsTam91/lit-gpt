@@ -40,11 +40,11 @@ def prepare(
     data_file_path = destination_path / data_file_name
     print("Loading data file...")
     # download_if_missing(data_file_path, data_file_url)
-    with open(data_file_path / data_file_name + "_train_set.json", "r", encoding="utf-8") as file:
+    with open(data_file_path / Path(data_file_name + "_train_set.json"), "r", encoding="utf-8") as file:
         train_set = json.load(file)
-    with open(data_file_path / data_file_name + "_test_set.json", "r", encoding="utf-8") as file:
+    with open(data_file_path / Path(data_file_name + "_test_set.json"), "r", encoding="utf-8") as file:
         test_set = json.load(file)
-    with open(data_file_path / data_file_name + "_val_set.json", "r", encoding="utf-8") as file:
+    with open(data_file_path / Path(data_file_name + "_val_set.json"), "r", encoding="utf-8") as file:
         val_set = json.load(file)
     
     print("Loading tokenizer...")
