@@ -6,7 +6,7 @@ from typing import Dict, List, Literal, Optional, Tuple
 
 import lightning as L
 import torch
-from lightning.fabric.loggers import CSVLogger
+from lightning.fabric.loggers import CSVLogger, TensorBoardLogger
 from lightning.fabric.plugins import BitsandbytesPrecision
 from lightning.fabric.strategies import FSDPStrategy
 
@@ -93,8 +93,9 @@ def setup(
     else:
         strategy = "auto"
 
-    logger = CSVLogger(out_dir.parent, out_dir.name, flush_logs_every_n_steps=log_interval)
-    fabric = L.Fabric(devices=devices, strategy=strategy, precision=precision, loggers=logger, plugins=plugins)
+    tb_logger = TensorBoardLogger(str(out_dir), "tensorboard", flush_logs_every_n_steps=log_interval)
+    csv_logger = CSVLogger(str(out_dir), "csv", flush_logs_every_n_steps=log_interval)
+    fabric = L.Fabric(devices=devices, strategy=strategy, precision=precision, loggers=[tb_logger, csv_logger], plugins=plugins)
     fabric.print(hparams)
     fabric.launch(main, data_dir, checkpoint_dir, out_dir, quantize)
 
@@ -294,16 +295,18 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
         losses[k] = chunked_cross_entropy(logits[..., :-1, :], targets[..., 1:], chunk_size=0)
 
         # Compute Rouge scores
-        generated_text = generate(model, input_ids, max_returned_tokens=len(input_ids) + eval_max_new_tokens, temperature=0.8)
+        # generated_text = generate(model, input_ids, max_returned_tokens=len(input_ids) + eval_max_new_tokens, temperature=0.8)
         reference_text = [tokenizer.decode(targets[0, i + 1]) for i in range(targets.shape[1] - 1)]
-        generated_text = tokenizer.decode(generated_text)
+        reference_text = batch_decode(targets[..., 1:])
+        # generated_text = tokenizer.decode(generated_text)
+        generated_text = tokenizer.batch_decode(logits[..., :-1, :])
         rouge_score = rouge_metric.compute(predictions=[generated_text], references=[reference_text])
         rouge_scores.append(rouge_score)
 
         # Compute SacreBLEU scores
-        reference_text = [" ".join(reference_text)]
-        generated_text = " ".join(generated_text.split())  # Ensure single spaces between words
-        sacrebleu_score = sacrebleu_metric.compute(predictions=[generated_text], references=reference_text)
+        # reference_text = [" ".join(reference_text)]
+        # generated_text = " ".join(generated_text.split())  # Ensure single spaces between words
+        sacrebleu_score = sacrebleu_metric.compute(predictions=generated_text, references=[reference_text])
         sacrebleu_scores.append(sacrebleu_score)
 
     val_loss = losses.mean()
