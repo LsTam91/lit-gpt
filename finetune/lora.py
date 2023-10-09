@@ -3,6 +3,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple
+from evaluate import load
 
 import lightning as L
 import torch
@@ -65,8 +66,8 @@ def setup(
     quantize: Optional[Literal["bnb.nf4", "bnb.nf4-dq", "bnb.fp4", "bnb.fp4-dq", "bnb.int8-training"]] = None,
 ):
     precision = precision or get_default_supported_precision(training=True)
-    rouge_metric = load_metric("rouge")
-    sacrebleu_metric = load_metric("sacrebleu")
+    rouge_metric = load("rouge")
+    sacrebleu_metric = load("sacrebleu")
 
 
     plugins = None
