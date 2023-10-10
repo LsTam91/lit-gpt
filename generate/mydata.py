@@ -128,7 +128,7 @@ def main(
     fabric.print(f"Time to load the model weights: {time.perf_counter() - t0:.02f} seconds.", file=sys.stderr)
 
     model.eval()
-    merge_lora_weights(model)
+    # merge_lora_weights(model)
     model = fabric.setup(model)
 
     tokenizer = Tokenizer(checkpoint_dir)

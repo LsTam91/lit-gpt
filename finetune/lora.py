@@ -301,7 +301,7 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
         # Compute Rouge scores
         generated_text = [tokenizer.decode(logits[..., :-1, :].argmax(dim=-1)[i]) for i in range(logits.shape[0])]
 
-        reference_text = [tokenizer.decode([token for token in targets[i, 1:] if token != -1]) for i in range(targets.shape[0])]
+        reference_text = [tokenizer.decode(torch.tensor([token for token in targets[i, 1:] if token != -1])) for i in range(targets.shape[0])]
         print(generated_text, reference_text)
 
         rouge_score = rouge_metric.compute(predictions=generated_text, references=reference_text)
