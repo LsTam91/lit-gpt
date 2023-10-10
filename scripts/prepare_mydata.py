@@ -25,6 +25,7 @@ def prepare(
     # data_file_url: str = "https://raw.githubusercontent.com/tloen/alpaca-lora/main/alpaca_data_cleaned_archive.json",
     ignore_index: int = -1,
     max_seq_length: Optional[int] = None,
+    prompt_type: str = 'alpaca',
 ) -> None:
     """Prepare the Alpaca dataset for instruction tuning.
 
@@ -68,6 +69,7 @@ def prepare(
             max_length=max_seq_length,
             mask_inputs=mask_inputs,
             ignore_index=ignore_index,
+            prompt_type=prompt_type,
         )
         for sample in tqdm(train_set)
     ]
@@ -81,6 +83,7 @@ def prepare(
             max_length=max_seq_length,
             mask_inputs=mask_inputs,
             ignore_index=ignore_index,
+            prompt_type=prompt_type,
         )
         for sample in tqdm(test_set)
     ]
@@ -94,6 +97,7 @@ def prepare(
             max_length=max_seq_length,
             mask_inputs=mask_inputs,
             ignore_index=ignore_index,
+            prompt_type=prompt_type,
         )
         for sample in tqdm(val_set)
     ]
@@ -108,7 +112,7 @@ def download_if_missing(file_path: Path, file_url: str):
         f.write(requests.get(file_url).text)
 
 
-def prepare_sample(example: dict, tokenizer: Tokenizer, max_length: int, mask_inputs: bool, ignore_index: int):
+def prepare_sample(example: dict, tokenizer: Tokenizer, max_length: int, mask_inputs: bool, ignore_index: int, prompt_type: str):
     """Processes a single sample.
 
     Each sample in the dataset consists of:
@@ -125,7 +129,7 @@ def prepare_sample(example: dict, tokenizer: Tokenizer, max_length: int, mask_in
     Finally, both the prompt and the label get tokenized. If desired, all tokens
     in the label that correspond to the original input prompt get masked out (default).
     """
-    full_prompt = generate_prompt(example)
+    full_prompt = generate_prompt(example, prompt_type)
     full_prompt_and_response = full_prompt + example["output"]
     encoded_full_prompt = tokenizer.encode(full_prompt, max_length=max_length)
     encoded_full_prompt_and_response = tokenizer.encode(full_prompt_and_response, eos=True, max_length=max_length)
@@ -143,22 +147,29 @@ def prepare_sample(example: dict, tokenizer: Tokenizer, max_length: int, mask_in
     }
 
 
-def generate_prompt(example):
+def generate_prompt(example, prompt_type: str = 'alpaca'):
     """Generates a standardized message to prompt the model with an instruction, optional input and a
     'response' field."""
-
-    if example["input"]:
+    if prompt_type == 'alpaca':
+        if example["input"]:
+            return (
+                "Below is an instruction that describes a task, paired with an input that provides further context. "
+                "Write a response that appropriately completes the request.\n\n"
+                f"### Instruction:\n{example['instruction']}\n\n### Input:\n{example['input']}\n\n### Response:"
+            )
         return (
-            "Below is an instruction that describes a task, paired with an input that provides further context. "
+            "Below is an instruction that describes a task. "
             "Write a response that appropriately completes the request.\n\n"
-            f"### Instruction:\n{example['instruction']}\n\n### Input:\n{example['input']}\n\n### Response:"
+            f"### Instruction:\n{example['instruction']}\n\n### Response:"
         )
-    return (
-        "Below is an instruction that describes a task. "
-        "Write a response that appropriately completes the request.\n\n"
-        f"### Instruction:\n{example['instruction']}\n\n### Response:"
-    )
-
+    else:
+        if example["input"]:
+            return (
+                f"### Instruction:\n{example['instruction']}\n\n### Input:\n{example['input']}\n\n### Response:"
+            )
+        return (
+            f"### Instruction:\n{example['instruction']}\n\n### Response:"
+        )
 
 if __name__ == "__main__":
     from jsonargparse import CLI

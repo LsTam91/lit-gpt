@@ -18,7 +18,7 @@ from generate.base import generate
 from lit_gpt import Tokenizer
 from lit_gpt.lora import GPT, Block, Config, merge_lora_weights
 from lit_gpt.utils import check_valid_checkpoint_dir, get_default_supported_precision, gptq_quantization, lazy_load
-from scripts.prepare_alpaca import generate_prompt
+from scripts.prepare_mydata import generate_prompt
 
 lora_r = 8
 lora_alpha = 16
@@ -38,13 +38,14 @@ def main(
     lora_path: Path = Path("out/lora/alpaca/lit_model_lora_finetuned.pth"),
     checkpoint_dir: Path = Path("checkpoints/stabilityai/stablelm-base-alpha-3b"),
     quantize: Optional[Literal["bnb.nf4", "bnb.nf4-dq", "bnb.fp4", "bnb.fp4-dq", "bnb.int8", "gptq.int4"]] = None,
-    max_new_tokens: int = 512,
+    max_new_tokens: int = 1024,
     top_k: int = 200,
     temperature: float = 0.8,
     strategy: str = "auto",
     devices: int = 1,
     precision: Optional[str] = None,
     out_dir: Path = Path('/test_results.json'),
+    prompt_type: str = 'alpaca', 
 ) -> None:
     """Generates a response based on a given instruction and an optional input.
     This script will only work with checkpoints from the instruction-tuned GPT-LoRA model.
@@ -149,7 +150,7 @@ def main(
     for datum in data:
         
         sample = {"instruction": datum['instruction'], "input": datum["input"]}
-        prompt = generate_prompt(sample)
+        prompt = generate_prompt(sample, prompt_type)
         encoded = tokenizer.encode(prompt, device=fabric.device)
         prompt_length = encoded.size(0)
         max_returned_tokens = prompt_length + max_new_tokens
@@ -165,8 +166,9 @@ def main(
         # t = time.perf_counter() - t0
 
         output = tokenizer.decode(y)
-        answers.append(output)
-        output = output.split("### Response:")[1].strip()
+
+        inn, output = output.split("### Response:")
+        answers.append({'prompt': inn, 'generated_answer': output, 'ground_truth': datum['output']})
         # fabric.print(output)
 
         # tokens_generated = y.size(0) - prompt_length
@@ -201,7 +203,7 @@ def main(
     fabric.print("Average Sacrebleu Score:", average_sacrebleu_scores)
 
     with open(out_dir, 'w') as f:
-        json.dump(answers, f)
+        json.dump(answers, f, ensure_ascii=False)
 
 if __name__ == "__main__":
     from jsonargparse import CLI

@@ -27,7 +27,7 @@ from lit_gpt.utils import (
     load_checkpoint,
     num_parameters,
 )
-from scripts.prepare_alpaca import generate_prompt
+from scripts.prepare_mydata import generate_prompt
 
 eval_interval = 100 # each X step, one step is a batch
 save_interval = 100
@@ -54,6 +54,8 @@ lora_projection = False
 lora_mlp = False
 lora_head = False
 warmup_steps = 100
+
+prompt_type = 'alpaca'
 
 hparams = {k: v for k, v in locals().items() if isinstance(v, (int, float, str)) and not k.startswith("_")}
 
@@ -253,79 +255,82 @@ def train(
             save_lora_checkpoint(fabric, model, checkpoint_path)
 
 
-# @torch.inference_mode()
-# def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Tokenizer) -> torch.Tensor:
-#     fabric.print("Validating ...")
-#     model.eval()
-#     losses = torch.zeros(eval_iters)
-#     for k in range(eval_iters):
-#         input_ids, targets = get_batch(fabric, val_data)
-#         logits = model(input_ids)
-#         losses[k] = chunked_cross_entropy(logits[..., :-1, :], targets[..., 1:], chunk_size=0)
-#     val_loss = losses.mean()
-
-#     # produce an example:
-#     instruction = "Recommend a movie for me to watch during the weekend and explain the reason."
-#     fabric.print(instruction)
-#     sample = {"instruction": instruction, "input": ""}
-#     prompt = generate_prompt(sample)
-#     encoded = tokenizer.encode(prompt, device=fabric.device)
-#     with fabric.init_tensor():
-#         # do not set `max_seq_length=max_returned_token` because memory is not a concern here
-#         model.set_kv_cache(batch_size=1)
-#     output = generate(model, encoded, max_returned_tokens=len(encoded) + eval_max_new_tokens, temperature=0.8)
-#     model.clear_kv_cache()
-#     output = tokenizer.decode(output)
-#     fabric.print(output)
-
-#     model.train()
-#     return val_loss
 @torch.inference_mode()
 def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Tokenizer) -> torch.Tensor:
     fabric.print("Validating ...")
     model.eval()
     losses = torch.zeros(eval_iters)
-    # Mettre les métrique dans modèle pour les charge une seule fois
-    rouge_metric = load("rouge")
-    sacrebleu_metric = load("sacrebleu")
-    rouge_scores = []
-    sacrebleu_scores = []
-
     for k in range(eval_iters):
         input_ids, targets = get_batch(fabric, val_data)
         logits = model(input_ids)
         losses[k] = chunked_cross_entropy(logits[..., :-1, :], targets[..., 1:], chunk_size=0)
-
-        print(logits.shape, targets.shape) #torch.Size([2, 1082, 32000]) torch.Size([2, 1082]) 
-
-        # print([token for token in targets[0, 1:] if token != -1], logits[..., :-1, :].argmax(dim=-1)[0] )
-        # Compute Rouge scores
-        generated_text = [tokenizer.decode(logits[..., :-1, :].argmax(dim=-1)[i]).split("### Response:")[1].strip() for i in range(logits.shape[0])]
-
-        reference_text = [tokenizer.decode(torch.tensor([token for token in targets[i, 1:] if token != -1])).split("### Response:")[1].strip() for i in range(targets.shape[0])]
-        print(generated_text, reference_text)
-
-        rouge_score = rouge_metric.compute(predictions=generated_text, references=reference_text)
-        rouge_scores.append(rouge_score)
-
-        # Compute SacreBLEU scores
-        sacrebleu_score = sacrebleu_metric.compute(predictions=generated_text, references=reference_text)
-        sacrebleu_scores.append(sacrebleu_score)
-
     val_loss = losses.mean()
-    rouge_f1 = sum(score['rougeL'] for score in rouge_scores) / len(rouge_scores)
-    sacrebleu_score = sum(score['score'] for score in sacrebleu_scores) / len(sacrebleu_scores)
 
-    # Print the metrics
-    fabric.print(f"Validation Loss: {val_loss}")
-    fabric.print(f"Rouge F1 Score: {rouge_f1}")
-    fabric.print(f"SacreBLEU Score: {sacrebleu_score}")
-
-    values = {"loss": val_loss, "rouge": rouge_f1, "sacrebleu": sacrebleu_score}
-    fabric.log_dict(values)
+    # produce an example:
+    instruction = "Réponds clairement à la question en te basant exclusivement sur le paragraphe associé"
+    inn = "Napoléon est arrivé au pouvoir en peu d'années. Une révolution l'a enfanté, un peuple l'a choisi, un pape l'a couronné. Il a agrandi les frontières de son Empire, comme Charlemagne et Louis XIV, et construit son État au centre de l'Europe."
+    fabric.print(instruction)
+    sample = {"instruction": instruction, "input": inn}
+    prompt = generate_prompt(sample, prompt_type)
+    encoded = tokenizer.encode(prompt, device=fabric.device)
+    with fabric.init_tensor():
+        # do not set `max_seq_length=max_returned_token` because memory is not a concern here
+        model.set_kv_cache(batch_size=1)
+    output = generate(model, encoded, max_returned_tokens=len(encoded) + eval_max_new_tokens, temperature=0.8)
+    model.clear_kv_cache()
+    output = tokenizer.decode(output)
+    fabric.print(output)
 
     model.train()
     return val_loss
+
+# @torch.inference_mode()
+# def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Tokenizer) -> torch.Tensor:
+#     fabric.print("Validating ...")
+#     model.eval()
+#     losses = torch.zeros(eval_iters)
+#     # Mettre les métrique dans modèle pour les charge une seule fois
+#     rouge_metric = load("rouge")
+#     sacrebleu_metric = load("sacrebleu")
+#     rouge_scores = []
+#     sacrebleu_scores = []
+
+#     for k in range(eval_iters):
+#         input_ids, targets = get_batch(fabric, val_data)
+#         logits = model(input_ids)
+#         losses[k] = chunked_cross_entropy(logits[..., :-1, :], targets[..., 1:], chunk_size=0)
+
+#         print(logits.shape, targets.shape) #torch.Size([2, 1082, 32000]) torch.Size([2, 1082]) 
+
+#         # print([token for token in targets[0, 1:] if token != -1], logits[..., :-1, :].argmax(dim=-1)[0] )
+#         # Compute Rouge scores
+#         # fonctionne une fois puis "IndexError: list index out of range" sans doute car "### Response:" pas ds logits
+#         generated_text = [tokenizer.decode(logits[..., :-1, :].argmax(dim=-1)[i]).split("### Response:")[1].strip() for i in range(logits.shape[0])]
+
+#         reference_text = [tokenizer.decode(torch.tensor([token for token in targets[i, 1:] if token != -1])).split("### Response:")[1].strip() for i in range(targets.shape[0])]
+#         print(generated_text, reference_text)
+
+#         rouge_score = rouge_metric.compute(predictions=generated_text, references=reference_text)
+#         rouge_scores.append(rouge_score)
+
+#         # Compute SacreBLEU scores
+#         sacrebleu_score = sacrebleu_metric.compute(predictions=generated_text, references=reference_text)
+#         sacrebleu_scores.append(sacrebleu_score)
+
+#     val_loss = losses.mean()
+#     rouge_f1 = sum(score['rougeL'] for score in rouge_scores) / len(rouge_scores)
+#     sacrebleu_score = sum(score['score'] for score in sacrebleu_scores) / len(sacrebleu_scores)
+
+#     # Print the metrics
+#     fabric.print(f"Validation Loss: {val_loss}")
+#     fabric.print(f"Rouge F1 Score: {rouge_f1}")
+#     fabric.print(f"SacreBLEU Score: {sacrebleu_score}")
+
+#     values = {"loss": val_loss, "rouge": rouge_f1, "sacrebleu": sacrebleu_score}
+#     fabric.log_dict(values)
+
+#     model.train()
+#     return val_loss
 
 
 
