@@ -66,8 +66,6 @@ def setup(
     quantize: Optional[Literal["bnb.nf4", "bnb.nf4-dq", "bnb.fp4", "bnb.fp4-dq", "bnb.int8-training"]] = None,
 ):
     precision = precision # or get_default_supported_precision(training=True)
-    rouge_metric = load("rouge")
-    sacrebleu_metric = load("sacrebleu")
 
 
     plugins = None
@@ -287,6 +285,9 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
     fabric.print("Validating ...")
     model.eval()
     losses = torch.zeros(eval_iters)
+    # Mettre les métrique dans modèle pour les charge une seule fois
+    rouge_metric = load("rouge")
+    sacrebleu_metric = load("sacrebleu")
     rouge_scores = []
     sacrebleu_scores = []
 
@@ -297,11 +298,11 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
 
         print(logits.shape, targets.shape) #torch.Size([2, 1082, 32000]) torch.Size([2, 1082]) 
 
-        print([token for token in targets[0, 1:] if token != -1], logits[..., :-1, :].argmax(dim=-1)[0] )
+        # print([token for token in targets[0, 1:] if token != -1], logits[..., :-1, :].argmax(dim=-1)[0] )
         # Compute Rouge scores
-        generated_text = [tokenizer.decode(logits[..., :-1, :].argmax(dim=-1)[i]) for i in range(logits.shape[0])]
+        generated_text = [tokenizer.decode(logits[..., :-1, :].argmax(dim=-1)[i]).split("### Response:")[1].strip() for i in range(logits.shape[0])]
 
-        reference_text = [tokenizer.decode(torch.tensor([token for token in targets[i, 1:] if token != -1])) for i in range(targets.shape[0])]
+        reference_text = [tokenizer.decode(torch.tensor([token for token in targets[i, 1:] if token != -1])).split("### Response:")[1].strip() for i in range(targets.shape[0])]
         print(generated_text, reference_text)
 
         rouge_score = rouge_metric.compute(predictions=generated_text, references=reference_text)
