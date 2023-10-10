@@ -300,9 +300,9 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
         # Compute Rouge scores
         # generated_text = generate(model, input_ids, max_returned_tokens=len(input_ids) + eval_max_new_tokens, temperature=0.8)
         # generated_ids = logits.argmax(dim=-1)
-        generated_text = [tokenizer.decode(logits.argmax(dim=-1)[i]) for i in range(logits.shape[0])]
+        generated_text = [tokenizer.decode(logits[..., :-1, :].argmax(dim=-1)[i]) for i in range(logits.shape[0])]
 
-        reference_text = [tokenizer.decode(targets[i]) for i in range(targets.shape[0])]
+        reference_text = [tokenizer.decode(targets[i, 1:]) for i in range(targets.shape[0])]
         # reference_text = tokenizer.batch_decode(targets[..., 1:])
         # generated_text = tokenizer.decode(generated_text)
         # generated_text = tokenizer.batch_decode(logits[..., :-1, :])
