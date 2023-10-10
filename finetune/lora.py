@@ -295,10 +295,12 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
         logits = model(input_ids)
         losses[k] = chunked_cross_entropy(logits[..., :-1, :], targets[..., 1:], chunk_size=0)
 
+        print(logits.shape, targets.shape)
+
         # Compute Rouge scores
         # generated_text = generate(model, input_ids, max_returned_tokens=len(input_ids) + eval_max_new_tokens, temperature=0.8)
-        reference_text = [tokenizer.decode(targets[0, i + 1]) for i in range(targets.shape[1] - 1)]
-        reference_text = batch_decode(targets[..., 1:])
+        # reference_text = [tokenizer.decode(targets[0, i + 1]) for i in range(targets.shape[1] - 1)]
+        reference_text = tokenizer.batch_decode(targets[..., 1:])
         # generated_text = tokenizer.decode(generated_text)
         generated_text = tokenizer.batch_decode(logits[..., :-1, :])
         rouge_score = rouge_metric.compute(predictions=[generated_text], references=[reference_text])
