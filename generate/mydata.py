@@ -44,6 +44,7 @@ def main(
     strategy: str = "auto",
     devices: int = 1,
     precision: Optional[str] = None,
+    out_dir: Path = Path('/test_results.json'),
 ) -> None:
     """Generates a response based on a given instruction and an optional input.
     This script will only work with checkpoints from the instruction-tuned GPT-LoRA model.
@@ -136,6 +137,8 @@ def main(
 
     with open(data_dir, 'r') as f:
         data = json.load(f)
+    
+    answers = []
 
     rouge_metric = load("rouge")
     sacrebleu_metric = load("sacrebleu")
@@ -162,6 +165,7 @@ def main(
         # t = time.perf_counter() - t0
 
         output = tokenizer.decode(y)
+        answers.append(output)
         output = output.split("### Response:")[1].strip()
         # fabric.print(output)
 
@@ -196,6 +200,8 @@ def main(
     fabric.print("Average ROUGE Scores:", average_rouge_scores)
     fabric.print("Average Sacrebleu Score:", average_sacrebleu_scores)
 
+    with open(out_dir, 'w') as f:
+        json.dump(answers, f)
 
 if __name__ == "__main__":
     from jsonargparse import CLI
