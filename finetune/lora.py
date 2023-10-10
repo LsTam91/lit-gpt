@@ -297,21 +297,16 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
 
         print(logits.shape, targets.shape) #torch.Size([2, 1082, 32000]) torch.Size([2, 1082]) 
 
+        print(targets[0], logits[..., :-1, :].argmax(dim=-1)[0] )
         # Compute Rouge scores
-        # generated_text = generate(model, input_ids, max_returned_tokens=len(input_ids) + eval_max_new_tokens, temperature=0.8)
-        # generated_ids = logits.argmax(dim=-1)
         generated_text = [tokenizer.decode(logits[..., :-1, :].argmax(dim=-1)[i]) for i in range(logits.shape[0])]
 
         reference_text = [tokenizer.decode(targets[i, 1:]) for i in range(targets.shape[0])]
-        # reference_text = tokenizer.batch_decode(targets[..., 1:])
-        # generated_text = tokenizer.decode(generated_text)
-        # generated_text = tokenizer.batch_decode(logits[..., :-1, :])
+
         rouge_score = rouge_metric.compute(predictions=generated_text, references=reference_text)
         rouge_scores.append(rouge_score)
 
         # Compute SacreBLEU scores
-        # reference_text = [" ".join(reference_text)]
-        # generated_text = " ".join(generated_text.split())  # Ensure single spaces between words
         sacrebleu_score = sacrebleu_metric.compute(predictions=generated_text, references=reference_text)
         sacrebleu_scores.append(sacrebleu_score)
 
