@@ -81,7 +81,7 @@ def main(
                 raise ValueError("Quantization and mixed precision is not supported.")
             dtype = {"16-true": torch.float16, "bf16-true": torch.bfloat16, "32-true": torch.float32}[precision]
             plugins = BitsandbytesPrecision(quantize[4:], dtype)
-            precision = None
+            # precision = None
 
     if strategy == "fsdp":
         strategy = FSDPStrategy(auto_wrap_policy={Block}, cpu_offload=False)

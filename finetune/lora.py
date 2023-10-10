@@ -297,12 +297,12 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
 
         print(logits.shape, targets.shape) #torch.Size([2, 1082, 32000]) torch.Size([2, 1082]) 
 
-        print(targets[0], logits[..., :-1, :].argmax(dim=-1)[0] )
+        print([token for token in targets[0, 1:] if token != -1], logits[..., :-1, :].argmax(dim=-1)[0] )
         # Compute Rouge scores
-        generated_text = [tokenizer.decode(logits[..., :-1, :].argmax(dim=-1)[i], skip_special_tokens=True) for i in range(logits.shape[0])]
+        generated_text = [tokenizer.decode(logits[..., :-1, :].argmax(dim=-1)[i]) for i in range(logits.shape[0])]
 
-        reference_text = [tokenizer.decode(targets[i, 1:], skip_special_tokens=True) for i in range(targets.shape[0])]
-        fabric.print(generated_text, reference_text)
+        reference_text = [tokenizer.decode([token for token in targets[i, 1:] if token != -1]) for i in range(targets.shape[0])]
+        print(generated_text, reference_text)
 
         rouge_score = rouge_metric.compute(predictions=generated_text, references=reference_text)
         rouge_scores.append(rouge_score)
@@ -312,15 +312,15 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
         sacrebleu_scores.append(sacrebleu_score)
 
     val_loss = losses.mean()
-    rouge_f1 = sum(rouge_scores) / len(rouge_scores)
-    sacrebleu_score = sum(sacrebleu_scores) / len(sacrebleu_scores)
+    rouge_f1 = sum(score['rougeL'] for score in rouge_scores) / len(rouge_scores)
+    sacrebleu_score = sum(score['score'] for score in sacrebleu_scores) / len(sacrebleu_scores)
 
     # Print the metrics
     fabric.print(f"Validation Loss: {val_loss}")
-    fabric.print(f"Rouge F1 Score: {rouge_f1['rougeL'].fmeasure}")
-    fabric.print(f"SacreBLEU Score: {sacrebleu_score['score']}")
+    fabric.print(f"Rouge F1 Score: {rouge_f1}")
+    fabric.print(f"SacreBLEU Score: {sacrebleu_score}")
 
-    values = {"loss": val_loss, "rouge": rouge_f1['rougeL'].fmeasure, "sacrebleu": sacrebleu_score['score']}
+    values = {"loss": val_loss, "rouge": rouge_f1, "sacrebleu": sacrebleu_score}
     fabric.log_dict(values)
 
     model.train()
