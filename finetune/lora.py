@@ -65,7 +65,7 @@ def setup(
     precision: Optional[str] = None,
     quantize: Optional[Literal["bnb.nf4", "bnb.nf4-dq", "bnb.fp4", "bnb.fp4-dq", "bnb.int8-training"]] = None,
 ):
-    precision = precision or get_default_supported_precision(training=True)
+    precision = precision # or get_default_supported_precision(training=True)
     rouge_metric = load("rouge")
     sacrebleu_metric = load("sacrebleu")
 
@@ -76,7 +76,7 @@ def setup(
             raise ValueError("Quantization and mixed precision is not supported.")
         dtype = {"16-true": torch.float16, "bf16-true": torch.bfloat16, "32-true": torch.float32}[precision]
         plugins = BitsandbytesPrecision(quantize[4:], dtype)
-        precision = None
+        # precision = None
 
     if devices > 1:
         if quantize:
@@ -94,8 +94,8 @@ def setup(
     else:
         strategy = "auto"
 
-    tb_logger = TensorBoardLogger(str(out_dir), "tensorboard", flush_logs_every_n_steps=log_interval)
-    csv_logger = CSVLogger(str(out_dir), "csv", flush_logs_every_n_steps=log_interval)
+    tb_logger = TensorBoardLogger(root_dir="logs/tensorboard", flush_logs_every_n_steps=log_interval)
+    csv_logger = CSVLogger(root_dir="logs/csv", flush_logs_every_n_steps=log_interval)
     fabric = L.Fabric(devices=devices, strategy=strategy, precision=precision, loggers=[tb_logger, csv_logger], plugins=plugins)
     fabric.print(hparams)
     fabric.launch(main, data_dir, checkpoint_dir, out_dir, quantize)
@@ -318,6 +318,9 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
     fabric.print(f"Validation Loss: {val_loss}")
     fabric.print(f"Rouge F1 Score: {rouge_f1['rougeL'].fmeasure}")
     fabric.print(f"SacreBLEU Score: {sacrebleu_score['score']}")
+
+    values = {"loss": val_loss, "rouge": rouge_f1['rougeL'].fmeasure, "sacrebleu": sacrebleu_score['score']}
+    fabric.log_dict(values)
 
     model.train()
     return val_loss
