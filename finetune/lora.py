@@ -29,20 +29,20 @@ from lit_gpt.utils import (
 )
 from scripts.prepare_mydata import generate_prompt
 
-eval_interval = 100 # each X step, one step is a batch
+eval_interval = 30 # each X step, one step is a batch
 save_interval = 100
-eval_iters = 100
+eval_iters = 300 # number of iter to do in the val our dataset around 600 so 300
 eval_max_new_tokens = 512 #1024 # want it big to evaluate generation, but not too much
-log_interval = 10 # log each X iters
+log_interval = 100 # log each X iters
 devices = 1
 
 # Hyperparameters
 learning_rate = 1e-4
 batch_size = 64
-micro_batch_size = 2
+micro_batch_size = 3
 gradient_accumulation_iters = batch_size // micro_batch_size
 assert gradient_accumulation_iters > 0
-max_iters = 20000  # 1 iter = 1 micro_batch
+max_iters = 15000  # 1 iter = 1 micro_batch
 weight_decay = 0.01
 lora_r = 8
 lora_alpha = 16
