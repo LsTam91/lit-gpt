@@ -167,8 +167,8 @@ def main(
 
         output = tokenizer.decode(y)
 
-        inn, output = output.split("### Response:")
-        answers.append({'prompt': inn, 'generated_answer': output, 'ground_truth': datum['output']})
+        answer_split = output.split("### Response:")
+        answers.append({'prompt': answer_split[0], 'generated_answer': answer_split[1], 'ground_truth': datum['output']})
         # fabric.print(output)
 
         # tokens_generated = y.size(0) - prompt_length
@@ -176,11 +176,11 @@ def main(
         # if fabric.device.type == "cuda":
         #     fabric.print(f"Memory used: {torch.cuda.max_memory_allocated() / 1e9:.02f} GB", file=sys.stderr)
 
-        rouge_score = rouge_metric.compute(predictions=[output], references=[datum['output']])
+        rouge_score = rouge_metric.compute(predictions=[answer_split[1]], references=[datum['output']])
         rouge_scores.append(rouge_score)
 
         # Compute SacreBLEU scores
-        sacrebleu_score = sacrebleu_metric.compute(predictions=[output], references=[datum['output']])
+        sacrebleu_score = sacrebleu_metric.compute(predictions=[answer_split[1]], references=[datum['output']])
         sacrebleu_scores.append(sacrebleu_score)
 
     # Calculate the average ROUGE scores
