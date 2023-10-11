@@ -94,9 +94,10 @@ def setup(
     else:
         strategy = "auto"
 
-    tb_logger = TensorBoardLogger(root_dir="logs/tensorboard", flush_logs_every_n_steps=log_interval)
+    # tb_logger = TensorBoardLogger(root_dir="logs/tensorboard", flush_logs_every_n_steps=log_interval)
     csv_logger = CSVLogger(root_dir="logs/csv", flush_logs_every_n_steps=log_interval)
-    fabric = L.Fabric(devices=devices, strategy=strategy, precision=precision, loggers=[tb_logger, csv_logger], plugins=plugins)
+    # [tb_logger, csv_logger]
+    fabric = L.Fabric(devices=devices, strategy=strategy, precision=precision, loggers=csv_logger, plugins=plugins)
     fabric.print(hparams)
     fabric.launch(main, data_dir, checkpoint_dir, out_dir, quantize)
 
