@@ -38,11 +38,11 @@ devices = 1
 
 # Hyperparameters
 learning_rate = 1e-4
-batch_size = 64
+batch_size = 96
 micro_batch_size = 3
 gradient_accumulation_iters = batch_size // micro_batch_size
 assert gradient_accumulation_iters > 0
-max_iters = 15000  # 1 iter = 1 micro_batch
+max_iters = 12000  # 1 iter = 1 micro_batch
 weight_decay = 0.01
 lora_r = 8
 lora_alpha = 16

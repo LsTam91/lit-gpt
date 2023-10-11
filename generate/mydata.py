@@ -32,6 +32,7 @@ lora_head = False
 
 
 def main(
+    out_dir: str,
     prompt: str = "A quel point sais-tu me répondre en français?",
     input: str = "",
     data_dir: Path = Path("data/alpaca"),
@@ -44,7 +45,6 @@ def main(
     strategy: str = "auto",
     devices: int = 1,
     precision: Optional[str] = None,
-    out_dir: Path = Path('/test_results.json'),
     prompt_type: str = 'alpaca', 
 ) -> None:
     """Generates a response based on a given instruction and an optional input.
