@@ -32,12 +32,11 @@ lora_head = False
 
 
 def main(
-    out_dir: str,
     prompt: str = "A quel point sais-tu me répondre en français?",
     input: str = "",
     data_dir: Path = Path("data/alpaca"),
     lora_path: Path = Path("out/lora/alpaca/lit_model_lora_finetuned.pth"),
-    checkpoint_dir: Path = Path("checkpoints/stabilityai/stablelm-base-alpha-3b"),
+    checkpoint_dir: Path = Path("checkpoints/meta-llama/Llama-2-7b-hf"),
     quantize: Optional[Literal["bnb.nf4", "bnb.nf4-dq", "bnb.fp4", "bnb.fp4-dq", "bnb.int8", "gptq.int4"]] = None,
     max_new_tokens: int = 1024,
     top_k: int = 200,
@@ -46,6 +45,7 @@ def main(
     devices: int = 1,
     precision: Optional[str] = None,
     prompt_type: str = 'alpaca', 
+    out_dir: Path =Path("out/eval_llama"),
 ) -> None:
     """Generates a response based on a given instruction and an optional input.
     This script will only work with checkpoints from the instruction-tuned GPT-LoRA model.
