@@ -15,7 +15,7 @@ from lightning.fabric.strategies import FSDPStrategy
 wd = Path(__file__).parent.parent.resolve()
 sys.path.append(str(wd))
 
-from generate.base import generate
+from generate.base import generate, generate_from_logits
 from lit_gpt.lora import GPT, Block, Config, lora_filter, mark_only_lora_as_trainable
 from lit_gpt.speed_monitor import SpeedMonitorFabric as SpeedMonitor
 from lit_gpt.speed_monitor import estimate_flops, measure_flops
@@ -290,7 +290,7 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
 #     fabric.print("Validating ...")
 #     model.eval()
 #     losses = torch.zeros(eval_iters)
-#     # Mettre les métrique dans modèle pour les charge une seule fois
+#     # TODO: Mettre les métrique dans modèle pour les charge une seule fois
 #     rouge_metric = load("rouge")
 #     sacrebleu_metric = load("sacrebleu")
 #     rouge_scores = []
@@ -301,22 +301,41 @@ def validate(fabric: L.Fabric, model: GPT, val_data: List[Dict], tokenizer: Toke
 #         logits = model(input_ids)
 #         losses[k] = chunked_cross_entropy(logits[..., :-1, :], targets[..., 1:], chunk_size=0)
 
-#         print(logits.shape, targets.shape) #torch.Size([2, 1082, 32000]) torch.Size([2, 1082]) 
+#         # print(logits.shape, targets.shape) #torch.Size([2, 1082, 32000]) torch.Size([2, 1082])
 
-#         # print([token for token in targets[0, 1:] if token != -1], logits[..., :-1, :].argmax(dim=-1)[0] )
-#         # Compute Rouge scores
-#         # fonctionne une fois puis "IndexError: list index out of range" sans doute car "### Response:" pas ds logits
-#         generated_text = [tokenizer.decode(logits[..., :-1, :].argmax(dim=-1)[i]).split("### Response:")[1].strip() for i in range(logits.shape[0])]
+#         for u in range(logits.shape(0)):
+#             y = generate_from_logits(input_ids[u], logits[u])
+#             output = tokenizer.decode(y)
+#             answer_split = output.split("### Response:")
 
-#         reference_text = [tokenizer.decode(torch.tensor([token for token in targets[i, 1:] if token != -1])).split("### Response:")[1].strip() for i in range(targets.shape[0])]
-#         print(generated_text, reference_text)
+#             mask = targets[u] != -1
+#             # npad = sum(mask.tolist())
+#             filtered_target = torch.masked_select(targets[u], mask)
+#             filtered_target = tokenizer.decode(filtered_target)
+#             target_split = output.split("### Response:")
 
-#         rouge_score = rouge_metric.compute(predictions=generated_text, references=reference_text)
-#         rouge_scores.append(rouge_score)
+#             # compute rouge score
+#             rouge_score = rouge_metric.compute(predictions=[answer_split[1]], references=[target_split[1]])
+#             rouge_scores.append(rouge_score)
 
-#         # Compute SacreBLEU scores
-#         sacrebleu_score = sacrebleu_metric.compute(predictions=generated_text, references=reference_text)
-#         sacrebleu_scores.append(sacrebleu_score)
+#             # Compute SacreBLEU scores
+#             sacrebleu_score = sacrebleu_metric.compute(predictions=[answer_split[1]], references=[target_split[1]])
+#             sacrebleu_scores.append(sacrebleu_score)
+
+#         # # print([token for token in targets[0, 1:] if token != -1], logits[..., :-1, :].argmax(dim=-1)[0] )
+#         # # Compute Rouge scores
+#         # # fonctionne une fois puis "IndexError: list index out of range" sans doute car "### Response:" pas ds logits
+#         # generated_text = [tokenizer.decode(logits[..., :-1, :].argmax(dim=-1)[i]).split("### Response:")[1].strip() for i in range(logits.shape[0])]
+
+#         # reference_text = [tokenizer.decode(torch.tensor([token for token in targets[i, 1:] if token != -1])).split("### Response:")[1].strip() for i in range(targets.shape[0])]
+#         # print(generated_text, reference_text)
+
+#         # rouge_score = rouge_metric.compute(predictions=generated_text, references=reference_text)
+#         # rouge_scores.append(rouge_score)
+
+#         # # Compute SacreBLEU scores
+#         # sacrebleu_score = sacrebleu_metric.compute(predictions=generated_text, references=reference_text)
+#         # sacrebleu_scores.append(sacrebleu_score)
 
 #     val_loss = losses.mean()
 #     rouge_f1 = sum(score['rougeL'] for score in rouge_scores) / len(rouge_scores)
